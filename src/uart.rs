@@ -68,7 +68,7 @@ impl UartConnection {
             }
             if let Ok(response) = self.connection.read(1, UART_RECEIVE_TIMEOUT) {
                 let byte = response[0];
-                data.push(byte[0]);
+                data.push(byte);
                 if byte == 0 {
                     break;
                 }
