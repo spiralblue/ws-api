@@ -3,7 +3,7 @@ use cobs::{decode_vec, encode_vec};
 
 mod uart;
 
-pub use crate::uart::{Uart};
+pub use crate::uart::{UartConnection};
 
 /// Single byte identifier for the type of command
 #[derive(Copy, Clone, PartialEq, Debug)]
