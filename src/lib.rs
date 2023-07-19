@@ -1,6 +1,7 @@
 use chrono::prelude::*;
 use cobs::{decode_vec, encode_vec};
 
+/// Single byte identifier for the type of command
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[repr(u8)]
 pub enum CommandType {
@@ -30,16 +31,48 @@ impl From<u8> for CommandType {
     }
 }
 
+/// A command used in communicating with the payload
+///
+/// # Fields
+///
+/// * `command_type` - The type of command
+/// * `data` - The data associated with the command
+///
 pub struct Command {
     pub command_type: CommandType,
     pub data: Vec<u8>,
 }
 
+/// Convert a DateTime<Utc> to a Vec<u8>
+///
+/// # Arguments
+///
+/// * `time` - The DateTime<Utc> to convert
+///
+/// # Returns
+///
+/// * A Vec<u8> containing the bytes of the DateTime<Utc>
+///
 pub fn datetime_to_bytes(time: DateTime<Utc>) -> Vec<u8> {
     let time = time.timestamp_millis();
     time.to_be_bytes().to_vec()
 }
 
+/// Convert a Vec<u8> to a DateTime<Utc>
+///
+/// # Arguments
+///
+/// * `bytes` - The Vec<u8> to convert
+///
+/// # Returns
+///
+/// * A DateTime<Utc> containing the date and time of the bytes
+///
+/// # Panics
+///
+/// * If the bytes are not the correct length
+/// * If the bytes cannot be converted to a DateTime<Utc>
+///
 pub fn bytes_to_datetime(bytes: &[u8]) -> DateTime<Utc> {
     let mut time_bytes = [0u8; 8];
     time_bytes.copy_from_slice(&bytes[..8]);
@@ -47,7 +80,19 @@ pub fn bytes_to_datetime(bytes: &[u8]) -> DateTime<Utc> {
     Utc.timestamp_millis_opt(time).unwrap()
 }
 
+
 impl Command {
+    /// Create a new command
+    ///
+    /// # Arguments
+    ///
+    /// * `command_type` - The type of command
+    /// * `data` - The data associated with the command
+    ///
+    /// # Returns
+    ///
+    /// * A new Command
+    ///
     pub fn new(command_type: CommandType, data: Vec<u8>) -> Command {
         Command {
             command_type,
@@ -55,18 +100,58 @@ impl Command {
         }
     }
 
+    /// Create a new time command
+    ///
+    /// # Arguments
+    ///
+    /// * `time` - The time to send
+    ///
+    /// # Returns
+    ///
+    /// * A new Command containing the time
+    ///
     pub fn time(time: DateTime<Utc>) -> Command {
         Command::new(CommandType::Time, datetime_to_bytes(time))
     }
 
+    /// Create a new startup command
+    ///
+    /// # Arguments
+    ///
+    /// * `command` - The command to send
+    ///
+    /// # Returns
+    ///
+    /// * A new Command containing the command
+    ///
     pub fn startup_command(command: Vec<u8>) -> Command {
         Command::new(CommandType::StartupCommand, command)
     }
 
+    /// Create a new simple command with no data
+    ///
+    /// # Arguments
+    ///
+    /// * `command_type` - The type of command
+    ///
+    /// # Returns
+    ///
+    /// * A new Command containing the command type and no data
+    ///
     pub fn simple_command(command_type: CommandType) -> Command {
         Command::new(command_type, Vec::new())
     }
 
+    /// Convert the command to a Vec<u8> encoded with COBS
+    ///
+    /// # Returns
+    ///
+    /// * A Vec<u8> containing the command
+    ///
+    /// # Panics
+    ///
+    /// * If the command type is invalid
+    ///
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
         bytes.push(self.command_type as u8);
@@ -78,6 +163,21 @@ impl Command {
         encoded
     }
 
+    /// Convert a COBS encoded Vec<u8> to a Command
+    ///
+    /// # Arguments
+    ///
+    /// * `bytes` - The Vec<u8> to convert
+    ///
+    /// # Returns
+    ///
+    /// * A Command containing the data from the bytes
+    ///
+    /// # Panics
+    ///
+    /// * If the bytes are not COBS encoded
+    /// * If the command type is invalid
+    ///
     pub fn from_bytes(bytes: Vec<u8>) -> Command {
         let null_index = bytes.iter().position(|&x| x == 0).unwrap();
         let decoded = decode_vec(&bytes[0..null_index].to_vec()).unwrap();
