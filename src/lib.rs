@@ -1,6 +1,10 @@
 use chrono::prelude::*;
 use cobs::{decode_vec, encode_vec};
 
+mod uart;
+
+pub use crate::uart::{Uart};
+
 /// Single byte identifier for the type of command
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[repr(u8)]
