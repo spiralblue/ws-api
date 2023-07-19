@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 chrono = "0.4.26"
 cobs = "0.2.3"
+serial = "0.4.0"
+uart-rs = { git = "ssh://git@github.com/Cube-OS/uart-rs.git", version = "0.2.0" }
