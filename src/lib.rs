@@ -178,12 +178,15 @@ impl Command {
     /// * If the bytes are not COBS encoded
     /// * If the command type is invalid
     ///
-    pub fn from_bytes(bytes: Vec<u8>) -> Command {
-        let null_index = bytes.iter().position(|&x| x == 0).unwrap();
-        let decoded = decode_vec(&bytes[0..null_index].to_vec()).unwrap();
-        let command_type = decoded[0];
-        let data = decoded[1..].to_vec();
-        Command::new(command_type.into(), data)
+    pub fn from_bytes(bytes: Vec<u8>) -> Option<Command> {
+        if let Some(null_index) = bytes.iter().position(|&x| x == 0) {
+            if let Ok(decoded) = decode_vec(&bytes[0..null_index].to_vec()) {
+                let command_type = decoded[0];
+                let data = decoded[1..].to_vec();
+                return Some(Command::new(command_type.into(), data));
+            }
+        }
+        return None;
     }
 }
 
