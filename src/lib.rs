@@ -17,6 +17,15 @@ pub enum CommandType {
     StartupCommandAcknowledge = 5,
     InitialisedAcknowledge = 6,
     PowerDownAcknowledge = 7,
+    RequestSendFile = 8
+    ReadyReceiveFile = 9
+    SendFileData = 10
+    ReceivedFileData = 11
+    SendFileHash = 12
+    ReceiveFileSuccess = 13
+    ReceiveFileErrorRetry = 14
+    ReceiveFileErrorAbort = 15
+    SendFileAbort = 16
 }
 
 impl From<u8> for CommandType {
@@ -30,6 +39,15 @@ impl From<u8> for CommandType {
             5 => CommandType::StartupCommandAcknowledge,
             6 => CommandType::InitialisedAcknowledge,
             7 => CommandType::PowerDownAcknowledge,
+            8 => CommandType::RequestSendFile,
+            9 => CommandType::ReadyReceiveFile,
+            10 => CommandType::SendFileData,
+            11 => CommandType::ReceivedFileData,
+            12 => CommandType::SendFileHash,
+            13 => CommandType::ReceiveFileSuccess,
+            14 => CommandType::ReceiveFileErrorRetry,
+            15 => CommandType::ReceiveFileErrorAbort,
+            16 => CommandType::SendFileAbort,
             _ => panic!("Invalid command type"),
         }
     }
