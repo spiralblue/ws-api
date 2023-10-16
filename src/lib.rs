@@ -1,12 +1,13 @@
 use chrono::prelude::*;
 use cobs::{decode_vec, encode_vec};
+use serde::{Deserialize, Serialize};
 
 mod uart;
 
 pub use crate::uart::{UartConnection};
 
 /// Single byte identifier for the type of command
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum CommandType {
     Time = 0,
@@ -17,15 +18,15 @@ pub enum CommandType {
     StartupCommandAcknowledge = 5,
     InitialisedAcknowledge = 6,
     PowerDownAcknowledge = 7,
-    RequestSendFile = 8
-    ReadyReceiveFile = 9
-    SendFileData = 10
-    ReceivedFileData = 11
-    SendFileHash = 12
-    ReceiveFileSuccess = 13
-    ReceiveFileErrorRetry = 14
-    ReceiveFileErrorAbort = 15
-    SendFileAbort = 16
+    RequestSendFile = 8,
+    ReadyReceiveFile = 9,
+    SendFileData = 10,
+    ReceivedFileData = 11,
+    SendFileHash = 12,
+    ReceiveFileSuccess = 13,
+    ReceiveFileErrorRetry = 14,
+    ReceiveFileErrorAbort = 15,
+    SendFileAbort = 16,
 }
 
 impl From<u8> for CommandType {
@@ -53,6 +54,10 @@ impl From<u8> for CommandType {
     }
 }
 
+pub trait Ftp {
+    fn ftp(&mut self) -> Result<(), std::io::Error>;
+}
+
 /// A command used in communicating with the payload
 ///
 /// # Fields
@@ -60,6 +65,7 @@ impl From<u8> for CommandType {
 /// * `command_type` - The type of command
 /// * `data` - The data associated with the command
 ///
+#[derive(Serialize,Deserialize,Debug)]
 pub struct Command {
     pub command_type: CommandType,
     pub data: Vec<u8>,
