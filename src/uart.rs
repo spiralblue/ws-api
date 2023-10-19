@@ -1,16 +1,19 @@
 use std::time::{Duration, Instant};
-use serial::PortSettings;
-use uart_rs::{Connection, UartResult};
+use serial::*;
+// use uart_rs::{Connection, UartResult};
 use crate::{Command, CommandType, Ftp};
 use std::io::{Read, Write};
 use std::fs::File;
 use serial::{SerialPort, SerialPortSettings};
 use sha2::{Digest, Sha256};
 
-const UART_RECEIVE_TIMEOUT: Duration = Duration::from_millis(1);
+const UART_RECEIVE_TIMEOUT: Duration = Duration::from_secs(1);
 
 pub struct UartConnection {
-    connection: Connection,
+    // port: Box<dyn SerialPort>,
+    path: String,
+    settings: PortSettings,
+    timeout: Duration,
 }
 
 impl UartConnection {
@@ -30,10 +33,15 @@ impl UartConnection {
         uart_path: String,
         uart_setting: PortSettings,
         uart_timeout: Duration,
-    ) -> Self {
-        Self {
-            connection: Connection::from_path(&uart_path, uart_setting, uart_timeout),
-        }
+    ) -> std::io::Result<Self> {
+        // let mut port = serial::open(&uart_path)?;
+        // port.configure(&uart_setting)?;
+        // port.set_timeout(uart_timeout)?;
+        Ok(Self {
+            path: uart_path,
+            settings: uart_setting,
+            timeout: uart_timeout,
+        })
     }
 
     /// Send a message to the UART device
@@ -46,9 +54,18 @@ impl UartConnection {
     ///
     /// * A UartResult containing the result of the send
     ///
-    pub fn send_message(&mut self, command: Command) -> UartResult<()> {
+    pub fn send_message(&mut self, command: Command) -> std::io::Result<()> {
         let data = command.to_bytes();
-        return self.connection.write(&data);
+        let mut port = serial::open(&self.path)?;
+        port.configure(&self.settings)?;
+        port.set_timeout(self.timeout)?;
+        match port.write(&data) {
+            Ok(_) => {
+                println!("Sent: {:?}", data);
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
     }
 
     /// Receive a message from the UART device
@@ -61,48 +78,79 @@ impl UartConnection {
     ///
     /// * An Option containing the received message
     ///
-    pub fn receive_message(&mut self, timeout: Duration) -> Option<Command> {
+    pub fn receive_message(&mut self, timeout: Duration) -> std::io::Result<Option<Command>> {
+        let mut port = serial::open(&self.path)?;
+        port.configure(&self.settings)?;
+        port.set_timeout(self.timeout)?;
         let start_time = Instant::now();
         let mut data = Vec::new();
         loop {
             if start_time.elapsed() > timeout {
                 break;
             }
-            if let Ok(response) = self.connection.read(1, UART_RECEIVE_TIMEOUT) {
-                let byte = response[0];
+            let mut buffer = [0u8; 1];
+            if let Ok(response) = port.read(&mut buffer) {
+                let byte = buffer[0];
                 data.push(byte);
                 if byte == 0 {
                     break;
                 }
             }
         }
-        return Command::from_bytes(data);
+        // println!("Received: {:?}", data);
+        Ok(Command::from_bytes(data))
+    }
+
+    pub fn receive_init(&mut self, timeout: Duration) -> std::io::Result<Vec<u8>> {
+        let mut port = serial::open(&self.path)?;
+        port.configure(&self.settings)?;
+        port.set_timeout(self.timeout)?;
+        let start_time = Instant::now();
+        let mut data = Vec::new();
+        loop {
+            if start_time.elapsed() > timeout {
+                break;
+            }
+            let mut buffer = [0u8; 1];
+            if let Ok(response) = port.read(&mut buffer) {
+                let byte = buffer[0];
+                data.push(byte);
+            }
+        }
+        // println!("Received: {:?}", data);
+        Ok(data)
     }
 }
 
 impl Read for UartConnection {
-    fn read(&mut self, buffer: &mut [u8]) -> Result<usize,std::io::Error> {
-        Ok(self.connection.read(buffer.len(), UART_RECEIVE_TIMEOUT).map(|data| {
-            buffer.copy_from_slice(&data);
-            data.len()
-        })?)
+    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        let mut port = serial::open(&self.path)?;
+        port.configure(&self.settings)?;
+        port.set_timeout(self.timeout)?;
+        Ok(port.read(buffer)?)
     }
 }
 
 impl Write for UartConnection {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.connection.write(buf)?;
+        let mut port = serial::open(&self.path)?;
+        port.configure(&self.settings)?;
+        port.set_timeout(self.timeout)?;
+        port.write(buf)?;
         Ok(buf.len())
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        // Ok(self.connection.flush()?)
-        Ok(())
+        let mut port = serial::open(&self.path)?;
+        port.configure(&self.settings)?;
+        port.set_timeout(self.timeout)?;
+        Ok(port.flush()?)
+        // Ok(())
     }
 }
 
 impl Ftp for UartConnection {
-    fn ftp(&mut self) -> Result<(), std::io::Error> {
+    fn ftp(&mut self) -> std::io::Result<()> {
         let mut buffer = [0; 1024];
         let mut file_name = String::new();
 

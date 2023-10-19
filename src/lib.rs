@@ -82,7 +82,7 @@ pub struct Command {
 /// * A Vec<u8> containing the bytes of the DateTime<Utc>
 ///
 pub fn datetime_to_bytes(time: DateTime<Utc>) -> Vec<u8> {
-    let time = time.timestamp_millis();
+    let time = time.timestamp();
     time.to_be_bytes().to_vec()
 }
 
