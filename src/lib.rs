@@ -210,7 +210,8 @@ impl Command {
         if let Some(null_index) = bytes.iter().position(|&x| x == 0) {
             if let Ok(decoded) = decode_vec(&bytes[0..null_index].to_vec()) {
                 let command_type = decoded[0];
-                let data = decoded[1..].to_vec();
+                let mut data = decoded[1..].to_vec();
+                // data.pop();  // Remove the null byte
                 return Some(Command::new(command_type.into(), data));
             }
         }

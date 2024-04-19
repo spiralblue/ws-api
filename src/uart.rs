@@ -79,9 +79,6 @@ impl UartConnection {
     /// * An Option containing the received message
     ///
     pub fn receive_message(&mut self, timeout: Duration) -> std::io::Result<Option<Command>> {
-        let mut port = serial::open(&self.path)?;
-        port.configure(&self.settings)?;
-        port.set_timeout(self.timeout)?;
         let start_time = Instant::now();
         let mut data = Vec::new();
         loop {
@@ -89,7 +86,7 @@ impl UartConnection {
                 break;
             }
             let mut buffer = [0u8; 1];
-            if let Ok(response) = port.read(&mut buffer) {
+            if let Ok(response) = self.read(&mut buffer) {
                 let byte = buffer[0];
                 data.push(byte);
                 if byte == 0 {
@@ -97,14 +94,11 @@ impl UartConnection {
                 }
             }
         }
-        // println!("Received: {:?}", data);
+        println!("Received: {:?}", data);
         Ok(Command::from_bytes(data))
     }
 
-    pub fn receive_init(&mut self, timeout: Duration) -> std::io::Result<Vec<u8>> {
-        let mut port = serial::open(&self.path)?;
-        port.configure(&self.settings)?;
-        port.set_timeout(self.timeout)?;
+    pub fn receive_init(&mut self, timeout: Duration) -> std::io::Result<()> {
         let start_time = Instant::now();
         let mut data = Vec::new();
         loop {
@@ -112,13 +106,18 @@ impl UartConnection {
                 break;
             }
             let mut buffer = [0u8; 1];
-            if let Ok(response) = port.read(&mut buffer) {
+            if let Ok(response) = self.read(&mut buffer) {
                 let byte = buffer[0];
                 data.push(byte);
+                if byte == 0 {
+                    if data[data.len() - 3] == 0x02 && data[data.len() - 2] == 0x02 && data[data.len() - 1] == 0x00 {
+                        // info!("Initialised");
+                        break;
+                    }
+                }
             }
         }
-        // println!("Received: {:?}", data);
-        Ok(data)
+        Ok(())
     }
 }
 
